@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import process from 'node:process';
-class Lox {
+
+export class Lox {
     static hadError = false;
     constructor() {
         const args = process.argv;
