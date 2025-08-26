@@ -14,14 +14,31 @@ export class Scanner {
         this.#source = source;
     }
 
+    #isAtEnd() {
+        return this.#current >= this.#source.length;
+    }
+
     scanTokens(): Array<Token> {
-        while (this.#current < this.#source.length) {
+        while (!this.#isAtEnd()) {
             this.#start = this.#start;
             this.#scanToken();
         }
 
         this.#tokens.push(new Token(TokenType.EOF, '', null, this.#line));
         return this.#tokens;
+    }
+
+    #match(expected: string) {
+        if (this.#isAtEnd()) {
+            return false;
+        }
+
+        if (this.#source.charAt(this.#current) != expected) {
+            return false;
+        }
+
+        this.#current++;
+        return true;
     }
 
     #scanToken() {
@@ -58,6 +75,35 @@ export class Scanner {
             case '*':
                 this.#addToken(TokenType.STAR);
                 break;
+            case '!':
+                this.#addToken(
+                    this.#match('=') ? TokenType.BANG_EQUAL : TokenType.BANG
+                );
+                break;
+            case '=':
+                this.#addToken(
+                    this.#match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL
+                );
+            case '<':
+                this.#addToken(
+                    this.#match('=') ? TokenType.LESS_EQUAL : TokenType.LESS
+                );
+            case '>':
+                this.#addToken(
+                    this.#match('=')
+                        ? TokenType.GREATER_EQUAL
+                        : TokenType.GREATER
+                );
+                break;
+
+            case '/':
+                if (this.#match('/')) {
+                    while (!this.#isAtEnd() && this.#peek() != '\n') {
+                        this.#advance();
+                    }
+                } else {
+                    this.#addToken(TokenType.SLASH);
+                }
 
             default:
                 Lox.error(this.#line, 'Unexpected character.');
@@ -65,8 +111,15 @@ export class Scanner {
         }
     }
 
+    #peek() {
+        //  if (this.#isAtEnd()) {
+        //      return '\0';
+        //  }
+        return this.#source.charAt(this.#current);
+    }
+
     #advance(): string {
-        const nextChar = this.#source.at(this.#current++);
+        const nextChar = this.#source.charAt(this.#current++);
 
         if (!nextChar) {
             throw new Error('Invalid char accessed!');
