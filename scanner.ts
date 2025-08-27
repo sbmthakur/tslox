@@ -104,11 +104,47 @@ export class Scanner {
                 } else {
                     this.#addToken(TokenType.SLASH);
                 }
+                break;
+
+            case ' ':
+            case '\r':
+            case '\t':
+                break;
+
+            case '\n':
+                this.#line++;
+                break;
+
+            case '"':
+                break;
 
             default:
                 Lox.error(this.#line, 'Unexpected character.');
                 break;
         }
+    }
+
+    #string() {
+        while (!this.#isAtEnd() && this.#peek() != '"') {
+            if (this.#peek() === '\n') {
+                this.#line++;
+            }
+            this.#advance();
+        }
+
+        if (this.#isAtEnd()) {
+            Lox.error(this.#line, 'Unterminated string.');
+            return;
+        }
+
+        this.#advance();
+
+        const value = this.#source.substring(
+            this.#start + 1,
+            this.#current - 1
+        );
+
+        this.#addToken(TokenType.STRING, value);
     }
 
     #peek() {
@@ -128,7 +164,7 @@ export class Scanner {
         return nextChar;
     }
 
-    #addToken(tokenType: TokenType, literal: object | null = null) {
+    #addToken(tokenType: TokenType, literal: string | null = null) {
         const text = this.#source.substring(this.#start, this.#current);
         this.#tokens.push(new Token(tokenType, text, literal, this.#line));
     }
