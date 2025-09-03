@@ -5,10 +5,29 @@ import { TokenType } from './tokenType';
 export class Scanner {
     readonly #source: string;
     readonly #tokens: Array<Token> = [];
-
+    //static keywords: Map<string, TokenType>;
     #start = 0;
     #current = 0;
     #line = 1;
+
+    static readonly keywords = new Map<string, TokenType>([
+        ['and', TokenType.AND],
+        ['class', TokenType.CLASS],
+        ['else', TokenType.ELSE],
+        ['false', TokenType.FALSE],
+        ['for', TokenType.FOR],
+        ['fun', TokenType.FUN],
+        ['if', TokenType.IF],
+        ['nil', TokenType.NIL],
+        ['or', TokenType.OR],
+        ['print', TokenType.PRINT],
+        ['return', TokenType.RETURN],
+        ['super', TokenType.SUPER],
+        ['this', TokenType.THIS],
+        ['true', TokenType.TRUE],
+        ['var', TokenType.VAR],
+        ['while', TokenType.WHILE],
+    ]);
 
     constructor(source: string) {
         this.#source = source;
@@ -116,10 +135,17 @@ export class Scanner {
                 break;
 
             case '"':
+                this.#string();
                 break;
 
             default:
-                Lox.error(this.#line, 'Unexpected character.');
+                if (this.#isDigit(c)) {
+                    this.#number();
+                } else if (this.#isAlpha(c)) {
+                    this.#identifier();
+                } else {
+                    Lox.error(this.#line, 'Unexpected character.');
+                }
                 break;
         }
     }
@@ -164,8 +190,57 @@ export class Scanner {
         return nextChar;
     }
 
-    #addToken(tokenType: TokenType, literal: string | null = null) {
+    #addToken(tokenType: TokenType, literal: string | number | null = null) {
         const text = this.#source.substring(this.#start, this.#current);
         this.#tokens.push(new Token(tokenType, text, literal, this.#line));
+    }
+
+    #isDigit(c: string): boolean {
+        return c >= '0' && c <= '9';
+    }
+
+    #number(): void {
+        while (this.#isDigit(this.#peek())) {
+            this.#advance();
+        }
+
+        if (this.#peek() === '.' && this.#isDigit(this.#peekNext())) {
+            this.#advance();
+
+            while (this.#isDigit(this.#peek())) {
+                this.#advance();
+            }
+        }
+
+        this.#addToken(
+            TokenType.NUMBER,
+            Number(this.#source.substring(this.#start, this.#current))
+        );
+    }
+
+    #peekNext() {
+        if (this.#current + 1 >= this.#source.length) {
+            return '\0';
+        }
+
+        return this.#source.charAt(this.#current + 1);
+    }
+
+    #identifier() {
+        while (this.#isAlphaNumeric(this.#peek())) {
+            this.#advance();
+        }
+
+        const text = this.#source.substring(this.#start, this.#current);
+        const tokenType = Scanner.keywords.get(text) ?? TokenType.IDENTIFIER;
+        this.#addToken(tokenType);
+    }
+
+    #isAlpha(c: string) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    }
+
+    #isAlphaNumeric(c: string) {
+        return this.#isAlpha(c) || this.#isDigit(c);
     }
 }
